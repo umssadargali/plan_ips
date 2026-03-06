@@ -3,131 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mathurapur Payment Portal</title>
+    <title>Mathurapur Payment</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
-        h1 { color: #1a73e8; text-align: center; margin-bottom: 5px; font-size: 26px; }
-        h3 { color: #5f6368; text-align: center; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
-        
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 5px; }
+        h4 { text-align: center; color: #5f6368; margin-top: 0; font-weight: 400; }
         label { display: block; margin-top: 15px; font-weight: 600; color: #3c4043; font-size: 14px; }
-        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
-        select:focus, input:focus { border: 2px solid #1a73e8; padding: 11px; }
-
-        .total-box { background: #e8f0fe; border-radius: 10px; padding: 20px; text-align: center; margin-top: 25px; border: 1px solid #1a73e8; }
-        .total-box label { display: block; margin: 0; color: #1a73e8; font-size: 13px; text-transform: uppercase; }
-        .total-box span { font-size: 32px; font-weight: 800; color: #1a73e8; }
-
-        button { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
+        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        .total-box { background: #e8f0fe; padding: 20px; border-radius: 10px; text-align: center; margin-top: 25px; border: 1px solid #1a73e8; }
+        .total-box label { color: #1a73e8; font-size: 13px; text-transform: uppercase; margin: 0; }
+        .total-amount { font-size: 30px; font-weight: bold; color: #1a73e8; }
+        button { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #218838; }
-        button:active { transform: scale(0.98); }
-        
-        #status { font-size: 12px; color: #d93025; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body onload="fetchNames()">
 
-<div class="container">
-    <h1>Payment</h1>
-    <h3>Cloud Based Management System</h3>
+<div class="card">
+    <h2>Payment</h2>
+    <h4>Mathurapur</h4>
 
     <label>Select Name</label>
-    <select id="userNames">
-        <option value="">Names Loading...</option>
-    </select>
+    <select id="nameList"><option>Loading names...</option></select>
 
     <label>Select Plan</label>
-    <select id="plan" onchange="calculateTotal()">
-        <option value="10">Basic - Rs 10</option>
-        <option value="20">Regular - Rs 20</option>
-        <option value="30">Advanced - Rs 30</option>
+    <select id="plan" onchange="calc()">
+        <option value="10">Basic - ₹10</option>
+        <option value="20">Regular - ₹20</option>
+        <option value="30">Advanced - ₹30</option>
     </select>
 
-    <label>No. of Students</label>
-    <input type="number" id="students" value="1" min="1" oninput="calculateTotal()">
+    <label>Number of Students</label>
+    <input type="number" id="students" value="1" min="1" oninput="calc()">
 
-    <label>Enter Other Amount (Override)</label>
-    <input type="number" id="otherAmount" placeholder="Wahi pay hoga jo yahan likhenge" oninput="calculateTotal()">
+    <label>Enter Other Amount (Optional)</label>
+    <input type="number" id="other" placeholder="Override calculation" oninput="calc()">
 
     <div class="total-box">
-        <label>Total Payable Amount</label>
-        <span>₹<span id="finalTotal">10</span></span>
+        <label>Total Payable</label>
+        <div class="total-amount">₹<span id="displayAmt">10</span></div>
     </div>
 
     <button onclick="processPayment()">PAY NOW</button>
-    <div id="status"></div>
 </div>
 
 <script>
     // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEIN
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxf1quu1257yq645mHeQXehRDUkVGpX8xSyUKK9ipD2hNcMx_2UX9gSzdHCHNIc3QI/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxf1quu1257yq645mHeQXehRDUkVGpX8xSyUKK9ipD2hNcMx_2UX9gSzdHCHNIc3QI/exec";
 
-    // 1. Sheet1 se names fetch karna
     async function fetchNames() {
         try {
-            const response = await fetch(SCRIPT_URL);
-            const data = await response.json();
-            const dropdown = document.getElementById('userNames');
-            
-            if (data.length > 0) {
-                dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
-            } else {
-                dropdown.innerHTML = '<option value="">No Names Found</option>';
-            }
-        } catch (error) {
-            document.getElementById('status').innerText = "Error: Names load nahi ho paye. Script URL check karein.";
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            const dropdown = document.getElementById('nameList');
+            dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
+            calc();
+        } catch (e) {
+            document.getElementById('nameList').innerHTML = "<option>Error loading names</option>";
         }
     }
 
-    // 2. Amount Calculation Logic
-    function calculateTotal() {
-        const rate = parseInt(document.getElementById('plan').value) || 0;
-        const count = parseInt(document.getElementById('students').value) || 0;
-        const other = document.getElementById('otherAmount').value;
+    function calc() {
+        let rate = parseInt(document.getElementById('plan').value);
+        let qty = parseInt(document.getElementById('students').value) || 0;
+        let other = document.getElementById('other').value;
 
-        let total;
-        // Agar Other Amount mein kuch likha hai toh wahi final hoga
-        if (other !== "" && parseInt(other) > 0) {
-            total = parseInt(other);
-        } else {
-            total = rate * count;
-        }
-
-        document.getElementById('finalTotal').innerText = total;
+        let total = (other !== "" && parseInt(other) > 0) ? parseInt(other) : (rate * qty);
+        document.getElementById('displayAmt').innerText = total;
         return total;
     }
 
-    // 3. Payment Processing
     function processPayment() {
-        const amount = calculateTotal();
-        const selectedUser = document.getElementById('userNames').value;
+        const amt = calc();
+        const name = document.getElementById('nameList').value;
 
-        if (!selectedUser || selectedUser === "Names Loading...") {
-            alert("Pehle naam select karein!");
-            return;
+        if(!name || name.includes("Loading")) {
+            alert("Names load hone ka intezar karein!"); return;
         }
 
-        // Data Sheet2 mein save karna (Background Process)
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
+        // Sheet2 mein data save karna
+        fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors",
             body: JSON.stringify({
-                name: selectedUser,
-                plan: document.getElementById('plan').options[document.getElementById('plan').selectedIndex].text,
+                name: name,
+                plan: document.getElementById('plan').selectedOptions[0].text,
                 students: document.getElementById('students').value,
-                extra: document.getElementById('otherAmount').value || 0,
-                total: amount
+                total: amt
             })
         });
 
-        // UPI Payment Link (Bina banking name ke)
-        const upiID = "nishatbanu5@kotak";
-        const upiUrl = `upi://pay?pa=${upiID}&am=${amount}&cu=INR`;
-
-        // Redirect to UPI App
+        // ⭐ UPDATED UPI LINK WITH SPACE HANDLING
+        const upiId = "nishatbanu5@kotak";
+        const payeeName = "NISHAT%20BANU"; // %20 space ke liye use hota hai
+        const upiUrl = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amt}&cu=INR`;
+        
         window.location.href = upiUrl;
     }
 </script>
-
 </body>
 </html>
