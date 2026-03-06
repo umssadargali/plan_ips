@@ -5,127 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mathurapur Payment Portal</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .payment-card { background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
-        h1 { color: #2c3e50; text-align: center; margin-bottom: 5px; font-size: 24px; }
-        h3 { color: #7f8c8d; text-align: center; margin-top: 0; margin-bottom: 25px; font-weight: normal; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
+        h1 { color: #1a73e8; text-align: center; margin-bottom: 5px; font-size: 26px; }
+        h3 { color: #5f6368; text-align: center; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
         
-        label { display: block; margin-bottom: 5px; font-weight: 600; color: #34495e; font-size: 14px; }
-        select, input { width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid #dcdde1; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; transition: border 0.3s; }
-        select:focus, input:focus { border-color: #3498db; }
+        label { display: block; margin-top: 15px; font-weight: 600; color: #3c4043; font-size: 14px; }
+        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
+        select:focus, input:focus { border: 2px solid #1a73e8; padding: 11px; }
 
-        .amount-display { background: #f8f9fa; border: 2px dashed #3498db; border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 20px; }
-        .amount-display span { font-size: 22px; font-weight: bold; color: #2980b9; }
+        .total-box { background: #e8f0fe; border-radius: 10px; padding: 20px; text-align: center; margin-top: 25px; border: 1px solid #1a73e8; }
+        .total-box label { display: block; margin: 0; color: #1a73e8; font-size: 13px; text-transform: uppercase; }
+        .total-box span { font-size: 32px; font-weight: 800; color: #1a73e8; }
 
-        button { width: 100%; background: #27ae60; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.3s; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2); }
-        button:hover { background: #219150; }
-        button:active { transform: translateY(2px); }
+        button { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
+        button:hover { background: #218838; }
+        button:active { transform: scale(0.98); }
         
-        .loading { color: #7f8c8d; font-style: italic; font-size: 12px; }
+        #status { font-size: 12px; color: #d93025; text-align: center; margin-top: 10px; }
     </style>
 </head>
-<body onload="fetchNamesFromSheet()">
+<body onload="fetchNames()">
 
-<div class="payment-card">
+<div class="container">
     <h1>Payment</h1>
     <h3>Mathurapur</h3>
 
-    <label for="nameList">Select Name</label>
-    <select id="nameList">
-        <option value="">Loading names...</option>
+    <label>Select Name</label>
+    <select id="userNames">
+        <option value="">Names Loading...</option>
     </select>
 
-    <label for="plan">Select Plan</label>
-    <select id="plan" onchange="updateTotal()">
-        <option value="10">Basic - ₹10</option>
-        <option value="20">Regular - ₹20</option>
-        <option value="30">Advanced - ₹30</option>
+    <label>Select Plan</label>
+    <select id="plan" onchange="calculateTotal()">
+        <option value="10">Basic - Rs 10</option>
+        <option value="20">Regular - Rs 20</option>
+        <option value="30">Advanced - Rs 30</option>
     </select>
 
-    <label for="students">No. of Students</label>
-    <input type="number" id="students" value="1" min="1" placeholder="Enter number" oninput="updateTotal()">
+    <label>No. of Students</label>
+    <input type="number" id="students" value="1" min="1" oninput="calculateTotal()">
 
-    <label for="otherAmount">Enter Other Amount (Optional)</label>
-    <input type="number" id="otherAmount" value="0" min="0" placeholder="0" oninput="updateTotal()">
+    <label>Enter Other Amount (Override)</label>
+    <input type="number" id="otherAmount" placeholder="Wahi pay hoga jo yahan likhenge" oninput="calculateTotal()">
 
-    <div class="amount-display">
-        <label style="display:inline; margin:0;">Total Payable Amount:</label><br>
-        <span>₹<span id="totalLabel">10</span></span>
+    <div class="total-box">
+        <label>Total Payable Amount</label>
+        <span>₹<span id="finalTotal">10</span></span>
     </div>
 
-    <button onclick="handlePayment()">Pay Now</button>
+    <button onclick="processPayment()">PAY NOW</button>
+    <div id="status"></div>
 </div>
 
 <script>
-    // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEN
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYQAUbbt-RwVushqgKZDqSSajrew8VyDURR1qq8mcyjP3w8TpC__f73YdOkr2dVJ0/exec"; 
+    // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEIN
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYQAUbbt-RwVushqgKZDqSSajrew8VyDURR1qq8mcyjP3w8TpC__f73YdOkr2dVJ0/exec";
 
-    // 1. Sheet1 se names fetch karne ka function
-    async function fetchNamesFromSheet() {
+    // 1. Sheet1 se names fetch karna
+    async function fetchNames() {
         try {
             const response = await fetch(SCRIPT_URL);
-            const names = await response.json();
-            const dropdown = document.getElementById('nameList');
+            const data = await response.json();
+            const dropdown = document.getElementById('userNames');
             
-            if (names.length > 0) {
-                dropdown.innerHTML = names.map(name => `<option value="${name}">${name}</option>`).join('');
+            if (data.length > 0) {
+                dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
             } else {
-                dropdown.innerHTML = '<option value="">No names found</option>';
+                dropdown.innerHTML = '<option value="">No Names Found</option>';
             }
         } catch (error) {
-            console.error("Error fetching names:", error);
-            document.getElementById('nameList').innerHTML = '<option value="">Error loading list</option>';
+            document.getElementById('status').innerText = "Error: Names load nahi ho paye. Script URL check karein.";
         }
     }
 
-    // 2. Total calculation logic
-    function updateTotal() {
-    const rate = parseInt(document.getElementById('plan').value) || 0;
-    const count = parseInt(document.getElementById('students').value) || 0;
-    const otherInput = document.getElementById('otherAmount').value;
+    // 2. Amount Calculation Logic
+    function calculateTotal() {
+        const rate = parseInt(document.getElementById('plan').value) || 0;
+        const count = parseInt(document.getElementById('students').value) || 0;
+        const other = document.getElementById('otherAmount').value;
 
-    let finalTotal = 0;
+        let total;
+        // Agar Other Amount mein kuch likha hai toh wahi final hoga
+        if (other !== "" && parseInt(other) > 0) {
+            total = parseInt(other);
+        } else {
+            total = rate * count;
+        }
 
-    // Logic: Agar Other Amount mein kuch likha hai, toh wahi final hoga
-    if (otherInput !== "" && parseInt(otherInput) > 0) {
-        finalTotal = parseInt(otherInput);
-    } else {
-        finalTotal = (rate * count);
+        document.getElementById('finalTotal').innerText = total;
+        return total;
     }
 
-    document.getElementById('totalLabel').innerText = finalTotal;
-    return finalTotal;
-}
+    // 3. Payment Processing
+    function processPayment() {
+        const amount = calculateTotal();
+        const selectedUser = document.getElementById('userNames').value;
 
-    // 3. Payment handling & Sheet2 data submission
-    function handlePayment() {
-        const total = updateTotal();
-        const userName = document.getElementById('nameList').value;
-        const selectedPlan = document.getElementById('plan').options[document.getElementById('plan').selectedIndex].text;
-
-        if (!userName) {
-            alert("Please select a name first!");
+        if (!selectedUser || selectedUser === "Names Loading...") {
+            alert("Pehle naam select karein!");
             return;
         }
 
-        // Data ko Sheet2 mein save karne ke liye backend par bhejna
+        // Data Sheet2 mein save karna (Background Process)
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify({
-                name: userName,
-                plan: selectedPlan,
+                name: selectedUser,
+                plan: document.getElementById('plan').options[document.getElementById('plan').selectedIndex].text,
                 students: document.getElementById('students').value,
-                extra: document.getElementById('otherAmount').value,
-                total: total
+                extra: document.getElementById('otherAmount').value || 0,
+                total: amount
             })
         });
 
-    // Updated UPI URL bina kisi extra naam ke
-    const upiID = "nishatbanu5@kotak";
-    window.location.href = `upi://pay?pa=${upiID}&am=${amt}&cu=INR`;
-}
+        // UPI Payment Link (Bina banking name ke)
+        const upiID = "nishatbanu5@kotak";
+        const upiUrl = `upi://pay?pa=${upiID}&am=${amount}&cu=INR`;
 
+        // Redirect to UPI App
+        window.location.href = upiUrl;
+    }
 </script>
 
 </body>
