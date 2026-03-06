@@ -3,104 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mathurapur Payment</title>
+    <title>Mathurapur Payment Portal</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
-        h2 { text-align: center; color: #1a73e8; margin-bottom: 5px; }
-        h4 { text-align: center; color: #5f6368; margin-top: 0; font-weight: 400; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
+        h1 { color: #1a73e8; text-align: center; margin-bottom: 5px; font-size: 24px; }
+        h3 { color: #5f6368; text-align: center; margin-top: 0; margin-bottom: 20px; font-weight: 400; }
+        
         label { display: block; margin-top: 15px; font-weight: 600; color: #3c4043; font-size: 14px; }
-        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
-        .total-box { background: #e8f0fe; padding: 20px; border-radius: 10px; text-align: center; margin-top: 25px; border: 1px solid #1a73e8; }
-        .total-box label { color: #1a73e8; font-size: 13px; text-transform: uppercase; margin: 0; }
-        .total-amount { font-size: 30px; font-weight: bold; color: #1a73e8; }
+        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; }
+        select:focus, input:focus { border: 2px solid #1a73e8; }
+
+        .total-box { background: #e8f0fe; border-radius: 10px; padding: 20px; text-align: center; margin-top: 25px; border: 1px solid #1a73e8; }
+        .total-box label { display: block; margin: 0; color: #1a73e8; font-size: 12px; text-transform: uppercase; font-weight: bold; }
+        .total-box span { font-size: 32px; font-weight: 800; color: #1a73e8; }
+
         button { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #218838; }
+        
+        #status { font-size: 12px; color: #d93025; text-align: center; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body onload="fetchNames()">
 
-<div class="card">
-    <h2>Payment</h2>
-    <h4>Mathurapur</h4>
+<div class="container">
+    <h1>Payment Portal</h1>
+    <h3>Mathurapur</h3>
 
     <label>Select Name</label>
-    <select id="nameList"><option>Loading names...</option></select>
-
-    <label>Select Plan</label>
-    <select id="plan" onchange="calc()">
-        <option value="10">Basic - ₹10</option>
-        <option value="20">Regular - ₹20</option>
-        <option value="30">Advanced - ₹30</option>
+    <select id="userNames">
+        <option value="">Names Loading...</option>
     </select>
 
-    <label>Number of Students</label>
-    <input type="number" id="students" value="1" min="1" oninput="calc()">
+    <label>Select Plan</label>
+    <select id="plan" onchange="calculateTotal()">
+        <option value="10">Basic - Rs 10</option>
+        <option value="20">Regular - Rs 20</option>
+        <option value="30">Advanced - Rs 30</option>
+    </select>
 
-    <label>Enter Other Amount (Optional)</label>
-    <input type="number" id="other" placeholder="Override calculation" oninput="calc()">
+    <label>No. of Students</label>
+    <input type="number" id="students" value="1" min="1" oninput="calculateTotal()">
+
+    <label>Other Amount (Optional)</label>
+    <input type="number" id="otherAmount" placeholder="Enter custom amount" oninput="calculateTotal()">
 
     <div class="total-box">
-        <label>Total Payable</label>
-        <div class="total-amount">₹<span id="displayAmt">10</span></div>
+        <label>Total Amount to Pay</label>
+        <span>₹<span id="finalTotal">10</span></span>
     </div>
 
     <button onclick="processPayment()">PAY NOW</button>
+    <div id="status"></div>
 </div>
 
 <script>
     // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEIN
-    const API_URL = "https://script.google.com/macros/s/AKfycbxf1quu1257yq645mHeQXehRDUkVGpX8xSyUKK9ipD2hNcMx_2UX9gSzdHCHNIc3QI/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxf1quu1257yq645mHeQXehRDUkVGpX8xSyUKK9ipD2hNcMx_2UX9gSzdHCHNIc3QI/exec";
 
+    // 1. Names load karne ka function (Sheet1 se)
     async function fetchNames() {
         try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            const dropdown = document.getElementById('nameList');
-            dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
-            calc();
-        } catch (e) {
-            document.getElementById('nameList').innerHTML = "<option>Error loading names</option>";
+            const response = await fetch(SCRIPT_URL);
+            const data = await response.json();
+            const dropdown = document.getElementById('userNames');
+            
+            if (data.length > 0) {
+                dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
+            } else {
+                dropdown.innerHTML = '<option value="">No Names Found</option>';
+            }
+        } catch (error) {
+            document.getElementById('status').innerText = "Names load nahi ho sake. Script URL check karein!";
         }
     }
 
-    function calc() {
-        let rate = parseInt(document.getElementById('plan').value);
-        let qty = parseInt(document.getElementById('students').value) || 0;
-        let other = document.getElementById('other').value;
+    // 2. Amount calculation (Other Amount priority ke saath)
+    function calculateTotal() {
+        const rate = parseInt(document.getElementById('plan').value) || 0;
+        const count = parseInt(document.getElementById('students').value) || 0;
+        const other = document.getElementById('otherAmount').value;
 
-        let total = (other !== "" && parseInt(other) > 0) ? parseInt(other) : (rate * qty);
-        document.getElementById('displayAmt').innerText = total;
+        let total;
+        if (other !== "" && parseInt(other) > 0) {
+            total = parseInt(other);
+        } else {
+            total = rate * count;
+        }
+
+        document.getElementById('finalTotal').innerText = total;
         return total;
     }
 
+    // 3. Payment function (Sabhi Apps support karne ke liye)
     function processPayment() {
-        const amt = calc();
-        const name = document.getElementById('nameList').value;
+        const amount = calculateTotal();
+        const selectedUser = document.getElementById('userNames').value;
 
-        if(!name || name.includes("Loading")) {
-            alert("Names load hone ka intezar karein!"); return;
+        if (!selectedUser || selectedUser === "Names Loading...") {
+            alert("Pehle naam select karein!");
+            return;
         }
 
-        // Sheet2 mein data save karna
-        fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors",
+        // Background mein data Sheet2 mein save karna
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
             body: JSON.stringify({
-                name: name,
-                plan: document.getElementById('plan').selectedOptions[0].text,
+                name: selectedUser,
+                plan: document.getElementById('plan').options[document.getElementById('plan').selectedIndex].text,
                 students: document.getElementById('students').value,
-                total: amt
+                total: amount
             })
         });
 
-        // ⭐ UPDATED UPI LINK WITH SPACE HANDLING
-        const upiId = "7549976381@kotak";
-        const payeeName = "NISHAT%20BANU"; // %20 space ke liye use hota hai
-        const upiUrl = `upi://pay?pa=${upiId}&pn=${payeeName}&am=${amt}&cu=INR`;
+        // ⭐ UNIVERSAL UPI LINK
+        // pa = UPI ID, pn = Banking Name (NISHAT BANU)
+        const upiID = "nishatbanu5@kotak";
+        const payeeName = "NISHAT%20BANU"; // %20 space ke liye hai
         
+        // Yeh link sabhi apps (GPay, PhonePe, Paytm) ka option dikhayega
+        const upiUrl = `upi://pay?pa=${upiID}&pn=${payeeName}&am=${amount}&cu=INR&tn=MathurapurPayment`;
+
+        // Payment app kholna
         window.location.href = upiUrl;
     }
 </script>
+
 </body>
 </html>
