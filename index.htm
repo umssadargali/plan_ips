@@ -58,7 +58,7 @@
 
 <script>
     // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEN
-    const SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYQAUbbt-RwVushqgKZDqSSajrew8VyDURR1qq8mcyjP3w8TpC__f73YdOkr2dVJ0/exec"; 
 
     // 1. Sheet1 se names fetch karne ka function
     async function fetchNamesFromSheet() {
@@ -80,14 +80,22 @@
 
     // 2. Total calculation logic
     function updateTotal() {
-        const rate = parseInt(document.getElementById('plan').value) || 0;
-        const count = parseInt(document.getElementById('students').value) || 0;
-        const other = parseInt(document.getElementById('otherAmount').value) || 0;
+    const rate = parseInt(document.getElementById('plan').value) || 0;
+    const count = parseInt(document.getElementById('students').value) || 0;
+    const otherInput = document.getElementById('otherAmount').value;
 
-        const finalTotal = (rate * count) + other;
-        document.getElementById('totalLabel').innerText = finalTotal;
-        return finalTotal;
+    let finalTotal = 0;
+
+    // Logic: Agar Other Amount mein kuch likha hai, toh wahi final hoga
+    if (otherInput !== "" && parseInt(otherInput) > 0) {
+        finalTotal = parseInt(otherInput);
+    } else {
+        finalTotal = (rate * count);
     }
+
+    document.getElementById('totalLabel').innerText = finalTotal;
+    return finalTotal;
+}
 
     // 3. Payment handling & Sheet2 data submission
     function handlePayment() {
